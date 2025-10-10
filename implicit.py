@@ -125,6 +125,7 @@ class SDFVolume(torch.nn.Module):
     def forward(self, ray_bundle):
         sample_points = ray_bundle.sample_points.view(-1, 3)
         depth_values = ray_bundle.sample_lengths[..., 0]
+        
         deltas = torch.cat(
             (
                 depth_values[..., 1:] - depth_values[..., :-1],

@@ -1,3 +1,4 @@
 *.pyc
 *.yaml
 *.log
+nerf_data/
