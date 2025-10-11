@@ -53,6 +53,12 @@ class Model(torch.nn.Module):
         self.implicit_fn = implicit_dict[cfg.implicit_function.type](
             cfg.implicit_function
         )
+        
+        self.implicit_fn_fine = None
+        if getattr(cfg.implicit_function, "use_hierarchy", False):
+            self.implicit_fn_fine = implicit_dict[cfg.implicit_function.type](
+                cfg.implicit_function
+            )
 
         # Point sampling (raymarching) scheme
         self.sampler = sampler_dict[cfg.sampler.type](
@@ -75,7 +81,8 @@ class Model(torch.nn.Module):
         return self.renderer(
             self.sampler,
             self.implicit_fn,
-            ray_bundle
+            ray_bundle,
+            self.implicit_fn_fine
         )
 
 
@@ -115,6 +122,7 @@ def render_images(
             render_points(f'{file_prefix}sample_points.png', vis_ray_bundle.sample_points.reshape(1, -1, 3))
 
         # TODO (Q1.5): Implement rendering in renderer.py
+    
         out = model(ray_bundle)
 
         # Return rendered features (colors)
@@ -209,7 +217,7 @@ def train(
             out = model(ray_bundle)
 
             # TODO (Q2.2): Calculate loss
-            loss = None
+            loss = torch.nn.MSELoss()(out['feature'], rgb_gt)
 
             # Backprop
             optimizer.zero_grad()
@@ -282,7 +290,7 @@ def create_model(cfg):
         )
 
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
-        optimizer, lr_lambda, last_epoch=start_epoch - 1, verbose=False
+        optimizer, lr_lambda, last_epoch=start_epoch - 1
     )
 
     return model, optimizer, lr_scheduler, start_epoch, checkpoint_path
@@ -329,7 +337,9 @@ def train_nerf(
             out = model(ray_bundle)
 
             # TODO (Q3.1): Calculate loss
-            loss = None
+            loss = torch.nn.MSELoss()(out['feature'], rgb_gt)
+            if 'feature_fine' in out:
+                loss += torch.nn.MSELoss()(out['feature_fine'], rgb_gt)
 
             # Take the training step.
             optimizer.zero_grad()
@@ -368,7 +378,8 @@ def train_nerf(
                     model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
                     cfg.data.image_size, file_prefix='nerf'
                 )
-                imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images], loop=0)
+                # imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images], loop=0)
+                imageio.mimsave('images/materials_highres.gif', [np.uint8(im * 255) for im in test_images], loop=0)
 
 
 @hydra.main(config_path='./configs', config_name='sphere')

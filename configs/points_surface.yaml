@@ -20,7 +20,7 @@ sampler:
   max_depth:
 
 training:
-  num_epochs: 5000
+  num_epochs: 10000
   pretrain_iters: 250
   batch_size: 4096
   lr: 0.0001
@@ -28,7 +28,7 @@ training:
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
 
-  checkpoint_path: ./points_checkpoint
+  checkpoint_path: ./checkpoints/points_checkpoint.pth
   checkpoint_interval: 100
   resume: True
 
@@ -41,12 +41,12 @@ training:
 implicit_function:
   type: neural_surface
 
-  n_harmonic_functions_xyz: 4
+  n_harmonic_functions_xyz: 6
 
-  n_layers_distance: 6
-  n_hidden_neurons_distance: 128
-  append_distance: []
+  n_layers_distance: 8
+  n_hidden_neurons_distance: 256
+  append_distance: [4]
 
-  n_layers_color: 2
+  n_layers_color: 4
   n_hidden_neurons_color: 128
   append_color: []

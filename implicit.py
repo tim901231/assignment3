@@ -298,8 +298,43 @@ class NeuralRadianceField(torch.nn.Module):
 
         embedding_dim_xyz = self.harmonic_embedding_xyz.output_dim
         embedding_dim_dir = self.harmonic_embedding_dir.output_dim
+        
+        self.net = MLPWithInputSkips(cfg.n_layers_xyz, embedding_dim_xyz, 0, embedding_dim_xyz, cfg.n_hidden_neurons_xyz, cfg.append_xyz)
+        self.linear_density = torch.nn.Sequential(torch.nn.Linear(cfg.n_hidden_neurons_xyz, 1),
+                                                   torch.nn.ReLU())
+        
+        self.linear_fuse = torch.nn.Sequential(LinearWithRepeat(cfg.n_hidden_neurons_xyz+embedding_dim_dir, cfg.n_hidden_neurons_dir),
+                                                torch.nn.ReLU())
+        self.linear_wo_fuse = torch.nn.Sequential(torch.nn.Linear(cfg.n_hidden_neurons_xyz, cfg.n_hidden_neurons_dir),
+                                                   torch.nn.ReLU())
+        self.linear_rgb = torch.nn.Sequential(torch.nn.Linear(cfg.n_hidden_neurons_dir, 3),
+                                                   torch.nn.Sigmoid())
 
-        pass
+    def forward(self, raybundle, views=True):
+        points = raybundle.sample_points
+        directions = raybundle.directions
+
+        xyz_embed = self.harmonic_embedding_xyz(points)
+        x = self.net(xyz_embed, xyz_embed)
+
+        density = self.linear_density(x)
+        
+        if views:
+            directions = self.harmonic_embedding_dir(directions)
+            x = self.linear_fuse((x, directions))
+        else:
+            x = self.linear_wo_fuse(x)
+        
+        rgb = self.linear_rgb(x)
+
+        out = {
+            'density': density,
+            'feature': rgb
+        }
+            
+        return out
+        
+        # self.linear1=. 
 
 
 class NeuralSurface(torch.nn.Module):
@@ -311,6 +346,14 @@ class NeuralSurface(torch.nn.Module):
         # TODO (Q6): Implement Neural Surface MLP to output per-point SDF
         # TODO (Q7): Implement Neural Surface MLP to output per-point color
 
+        self.harmonic_embedding_xyz = HarmonicEmbedding(3, cfg.n_harmonic_functions_xyz)
+        embedding_dim_xyz = self.harmonic_embedding_xyz.output_dim
+        self.net = MLPWithInputSkips(cfg.n_layers_distance, embedding_dim_xyz, 0, embedding_dim_xyz, cfg.n_hidden_neurons_distance, cfg.append_distance)
+        self.linear_distance = torch.nn.Linear(cfg.n_hidden_neurons_distance, 1)
+        self.net2 = MLPWithInputSkips(cfg.n_layers_color,  cfg.n_hidden_neurons_distance, 0,  cfg.n_hidden_neurons_distance, cfg.n_hidden_neurons_color, cfg.append_color)
+        self.linear_rgb = torch.nn.Sequential(torch.nn.Linear(cfg.n_hidden_neurons_color, 3),
+                                                   torch.nn.Sigmoid())
+
     def get_distance(
         self,
         points
@@ -321,7 +364,9 @@ class NeuralSurface(torch.nn.Module):
             distance: N X 1 Tensor, where N is number of input points
         '''
         points = points.view(-1, 3)
-        pass
+        xyz_embed = self.harmonic_embedding_xyz(points)
+        x = self.net(xyz_embed, xyz_embed)
+        return self.linear_distance(x)
     
     def get_color(
         self,
@@ -333,7 +378,10 @@ class NeuralSurface(torch.nn.Module):
             distance: N X 3 Tensor, where N is number of input points
         '''
         points = points.view(-1, 3)
-        pass
+        xyz_embed = self.harmonic_embedding_xyz(points)
+        x = self.net(xyz_embed, xyz_embed)
+        x = self.net2(x, x)
+        return self.linear_rgb(x)
     
     def get_distance_color(
         self,
@@ -346,6 +394,12 @@ class NeuralSurface(torch.nn.Module):
         You may just implement this by independent calls to get_distance, get_color
             but, depending on your MLP implementation, it maybe more efficient to share some computation
         '''
+        points = points.view(-1, 3)
+        xyz_embed = self.harmonic_embedding_xyz(points)
+        x = self.net(xyz_embed, xyz_embed)
+        distance = self.linear_distance(x)
+        x = self.net2(x, x)
+        return distance, self.linear_rgb(x)
         
     def forward(self, points):
         return self.get_distance(points)
@@ -379,3 +433,18 @@ implicit_dict = {
     'sdf_surface': SDFSurface,
     'neural_surface': NeuralSurface,
 }
+
+import hydra, os
+
+@hydra.main(config_path='./configs', config_name='sphere')
+def main(cfg):
+    os.chdir(hydra.utils.get_original_cwd())
+    layer = NeuralRadianceField(cfg['implicit_function'])
+    x = torch.randn(1000, 128, 3)
+    density, color = layer(x)
+    print(density.shape)
+    print(color.shape)
+
+if __name__ == "__main__":
+    main()
+    

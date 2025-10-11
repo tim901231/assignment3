@@ -102,7 +102,7 @@ def get_pixels_from_image(image_size, camera):
     xy_grid = torch.stack(
         tuple( reversed( torch.meshgrid(y, x) ) ),
         dim=-1,
-    ).view(W * H, 2)
+    ).view(W * H, 2).to(device=camera.device)
 
     return -xy_grid
 
@@ -112,10 +112,11 @@ def get_random_pixels_from_image(n_pixels, image_size, camera):
     xy_grid = get_pixels_from_image(image_size, camera)
     
     # TODO (Q2.1): Random subsampling of pixel coordinaters
-    pass
+    idx = torch.randperm(xy_grid.shape[0])[:n_pixels].to(device=xy_grid.device)
 
+    return xy_grid.reshape(-1, 2)[idx]
     # Return
-    return xy_grid_sub.reshape(-1, 2)[:n_pixels]
+    # return xy_grid_sub.reshape(-1, 2)[:n_pixels]
 
 
 # Get rays from pixel values

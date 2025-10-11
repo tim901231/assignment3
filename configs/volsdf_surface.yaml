@@ -33,7 +33,7 @@ training:
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
 
-  checkpoint_path: ./volsdf_checkpoint
+  checkpoint_path: ./checkpoints/volsdf_checkpoint.pth
   checkpoint_interval: 50
   resume: True
 
@@ -50,8 +50,9 @@ implicit_function:
 
   n_layers_distance: 6
   n_hidden_neurons_distance: 128
-  append_distance: []
+  append_distance: [3]
 
-  n_layers_color: 2
-  n_hidden_neurons_color: 128
+  n_layers_color: 1
+  n_hidden_neurons_color: 64
   append_color: []
+

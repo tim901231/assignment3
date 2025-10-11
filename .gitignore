@@ -2,3 +2,5 @@
 *.yaml
 *.log
 nerf_data/
+data/
+*.pth
