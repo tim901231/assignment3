@@ -33,9 +33,9 @@ training:
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
 
-  checkpoint_path: ./checkpoints/volsdf_checkpoint.pth
+  checkpoint_path: ./checkpoints/volsdf_checkpoint_tmp.pth
   checkpoint_interval: 50
-  resume: True
+  resume: False
 
   render_interval: 10
 

@@ -120,7 +120,9 @@ def get_nerf_datasets(
         for cami in range(n_cameras)
     ]
 
+    torch.manual_seed(42)
     train_idx, val_idx, test_idx = train_data["split"]
+    # train_idx = torch.randperm(100)[:20]
 
     train_dataset, val_dataset, test_dataset = [
         ListDataset(

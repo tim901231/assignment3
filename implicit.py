@@ -4,6 +4,45 @@ from torch import autograd
 
 from ray_utils import RayBundle
 
+class CompositeSDF(torch.nn.Module):
+    def __init__(
+        self,
+        cfg
+    ):
+        super().__init__()
+
+        self.sdfs = []
+
+        torch.manual_seed(42)
+        rand_ints = torch.randint(0, 3, (cfg.n_sdf,))
+
+        for i in rand_ints:
+            obj = None
+            # cfg.center.val = 2 * (torch.rand(3) - 0.5)
+
+            if i == 0:
+                obj = SphereSDF(cfg)
+            elif i == 1:
+                obj = BoxSDF(cfg)
+            else:
+                obj = TorusSDF(cfg)
+            
+            with torch.no_grad():
+                obj.center += 2 * (torch.rand_like(obj.center) - 0.5)
+                obj.to(device="cuda")
+            self.sdfs.append(obj)
+
+    def forward(self, points):
+
+        min_dist = torch.ones((len(points), 1)).to(device=points.device)
+
+        for sdf in self.sdfs:
+            dist = sdf(points)
+            min_dist = torch.min(dist, min_dist)
+
+        return min_dist
+
+
 
 # Sphere SDF class
 class SphereSDF(torch.nn.Module):
@@ -87,6 +126,7 @@ sdf_dict = {
     'sphere': SphereSDF,
     'box': BoxSDF,
     'torus': TorusSDF,
+    'composite': CompositeSDF
 }
 
 

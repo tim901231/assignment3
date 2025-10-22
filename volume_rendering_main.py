@@ -57,7 +57,7 @@ class Model(torch.nn.Module):
         self.implicit_fn_fine = None
         if getattr(cfg.implicit_function, "use_hierarchy", False):
             self.implicit_fn_fine = implicit_dict[cfg.implicit_function.type](
-                cfg.implicit_function
+                cfg.implicit_function_fine
             )
 
         # Point sampling (raymarching) scheme
@@ -126,6 +126,10 @@ def render_images(
         out = model(ray_bundle)
 
         # Return rendered features (colors)
+        if 'feature_fine' in out:
+            out['feature'] = out['feature_fine']
+
+
         image = np.array(
             out['feature'].view(
                 image_size[1], image_size[0], 3
@@ -378,8 +382,8 @@ def train_nerf(
                     model, create_surround_cameras(4.0, n_poses=20, up=(0.0, 0.0, 1.0), focal_length=2.0),
                     cfg.data.image_size, file_prefix='nerf'
                 )
-                # imageio.mimsave('images/part_3.gif', [np.uint8(im * 255) for im in test_images], loop=0)
-                imageio.mimsave('images/materials_highres.gif', [np.uint8(im * 255) for im in test_images], loop=0)
+                imageio.mimsave('images/part_3_fine.gif', [np.uint8(im * 255) for im in test_images], loop=0)
+                # imageio.mimsave('images/materials_highres.gif', [np.uint8(im * 255) for im in test_images], loop=0)
 
 
 @hydra.main(config_path='./configs', config_name='sphere')

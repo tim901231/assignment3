@@ -10,7 +10,7 @@ training:
   lr_scheduler_step_size: 50
   lr_scheduler_gamma: 0.8
 
-  checkpoint_path: ./checkpoints/lego.pth
+  checkpoint_path: ./checkpoints/lego_tmp.pth
   checkpoint_interval: 50
   resume: True
 
